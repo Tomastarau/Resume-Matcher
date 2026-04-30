@@ -179,6 +179,60 @@ class Project(BaseModel):
         return _coerce_string_list(value)
 
 
+class MasterProfilePersonalInfo(BaseModel):
+    """Master profile personal information."""
+
+    name: str = ""
+    title: str = ""
+    email: str = ""
+    phone: str = ""
+    location: str = ""
+    website: str | None = None
+    linkedin: str | None = None
+    github: str | None = None
+    summary: str = ""
+
+    @field_validator("summary", mode="before")
+    @classmethod
+    def _normalize_summary(cls, value: Any) -> str:
+        return _coerce_text(value)
+
+
+class MasterProfileExperience(BaseModel):
+    """Master profile work experience entry."""
+
+    id: int = 0
+    title: str = ""
+    company: str = ""
+    location: str | None = None
+    years: str = ""
+    description: list[str] = Field(default_factory=list)
+    technologies: list[str] = Field(default_factory=list)
+
+    @field_validator("description", "technologies", mode="before")
+    @classmethod
+    def _normalize_list_fields(cls, value: Any) -> list[str]:
+        return _coerce_string_list(value)
+
+
+class MasterProfileProject(BaseModel):
+    """Master profile project entry."""
+
+    id: int = 0
+    name: str = ""
+    role: str = ""
+    years: str = ""
+    github: str | None = None
+    website: str | None = None
+    description: list[str] = Field(default_factory=list)
+    technologies: list[str] = Field(default_factory=list)
+
+    @field_validator("description", "technologies", mode="before")
+    @classmethod
+    def _normalize_list_fields(cls, value: Any) -> list[str]:
+        return _coerce_string_list(value)
+
+
 class AdditionalInfo(BaseModel):
     """Additional information section."""
 
@@ -196,6 +250,25 @@ class AdditionalInfo(BaseModel):
     )
     @classmethod
     def _normalize_string_fields(cls, value: Any) -> list[str]:
+        return _coerce_string_list(value)
+
+
+class MasterProfile(BaseModel):
+    """Complete master profile data."""
+
+    personalInfo: MasterProfilePersonalInfo = Field(
+        default_factory=MasterProfilePersonalInfo
+    )
+    workExperience: list[MasterProfileExperience] = Field(default_factory=list)
+    projects: list[MasterProfileProject] = Field(default_factory=list)
+    education: list[Education] = Field(default_factory=list)
+    skills: list[str] = Field(default_factory=list)
+    languages: list[str] = Field(default_factory=list)
+    certifications: list[str] = Field(default_factory=list)
+
+    @field_validator("skills", "languages", "certifications", mode="before")
+    @classmethod
+    def _normalize_string_lists(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
 
 
@@ -329,10 +402,17 @@ def normalize_resume_data(data: dict[str, Any]) -> dict[str, Any]:
     This function is used for lazy migration of existing resumes
     that don't have sectionMeta or customSections fields.
     """
-    if not data.get("sectionMeta"):
-        # Use deepcopy to avoid shared mutable reference bug
-        # Without this, all resumes would share the same list reference
+    section_meta = data.get("sectionMeta")
+    if not section_meta:
+        # deepcopy required: without it all callers share the same list reference
         data["sectionMeta"] = copy.deepcopy(DEFAULT_SECTION_META)
+    else:
+        try:
+            data["sectionMeta"] = [
+                SectionMeta.model_validate(item).model_dump() for item in section_meta
+            ]
+        except Exception:
+            data["sectionMeta"] = copy.deepcopy(DEFAULT_SECTION_META)
     if "customSections" not in data:
         data["customSections"] = {}
     return data
@@ -439,9 +519,10 @@ class JobUploadResponse(BaseModel):
 class ImproveResumeRequest(BaseModel):
     """Request to improve/tailor a resume."""
 
-    resume_id: str
+    resume_id: str | None = None
     job_id: str
     prompt_id: str | None = None
+    use_master_profile: bool = False
 
 
 class ImprovementSuggestion(BaseModel):
@@ -544,10 +625,32 @@ class ImproveResumeResponse(BaseModel):
 class ImproveResumeConfirmRequest(BaseModel):
     """Request to confirm and save a tailored resume."""
 
-    resume_id: str
+    resume_id: str | None = None
     job_id: str
     improved_data: ResumeData
     improvements: list[ImprovementSuggestion]
+    use_master_profile: bool = False
+
+
+class MasterProfileImportRequest(BaseModel):
+    """Request to import resume data into the master profile."""
+
+    resume_id: str
+
+
+class MasterProfileResponse(BaseModel):
+    """Response containing the full master profile."""
+
+    request_id: str
+    data: MasterProfile
+
+
+class MasterProfileImportResponse(BaseModel):
+    """Response for master profile import."""
+
+    message: str
+    request_id: str
+    data: MasterProfile
 
 
 # Config Models

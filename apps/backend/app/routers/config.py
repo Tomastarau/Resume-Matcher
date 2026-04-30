@@ -122,8 +122,6 @@ async def update_llm_config(
         stored["model"] = request.model
     if request.api_key is not None:
         stored["api_key"] = request.api_key
-    if request.api_base is not None:
-        stored["api_base"] = request.api_base
 
     # Build normalized config for response
     test_config = LLMConfig(
@@ -216,7 +214,7 @@ async def update_feature_config(request: FeatureConfigRequest) -> FeatureConfigR
 
 
 # Supported languages for i18n
-SUPPORTED_LANGUAGES = ["en", "es", "zh", "ja", "pt"]
+SUPPORTED_LANGUAGES = ["en", "es", "zh", "ja", "pt", "fr"]
 
 
 @router.get("/language", response_model=LanguageConfigResponse)

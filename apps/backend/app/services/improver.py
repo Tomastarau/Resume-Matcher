@@ -16,7 +16,7 @@ from app.prompts import (
     get_language_name,
 )
 from app.prompts.templates import RESUME_SCHEMA
-from app.schemas import ResumeData, ResumeFieldDiff, ResumeDiffSummary
+from app.schemas import ResumeData, ResumeFieldDiff, ResumeDiffSummary, normalize_resume_data
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,7 @@ async def improve_resume(
     job_keywords: dict[str, Any],
     language: str = "en",
     prompt_id: str | None = None,
+    source_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Improve resume to better match job description.
 
@@ -141,6 +142,17 @@ async def improve_resume(
         system_prompt="You are an expert resume editor. Output only valid JSON.",
         max_tokens=8192,
     )
+
+    if not isinstance(result.get("personalInfo"), dict):
+        fallback_personal_info = (
+            source_data.get("personalInfo")
+            if isinstance(source_data, dict)
+            else None
+        )
+        if isinstance(fallback_personal_info, dict):
+            result["personalInfo"] = fallback_personal_info
+
+    result = normalize_resume_data(result)
 
     # LLM-006: Pre-validation check for truncation signs
     _check_for_truncation(result)

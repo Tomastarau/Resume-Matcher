@@ -2,6 +2,19 @@
 
 > **Git workflow, testing guidelines, and PR conventions.**
 
+## Integration Folder
+
+Before implementing a non-trivial feature, write a plan in [`/integration/`](/integration/).
+
+- Use `_template.plan.md` as a starting point
+- Name files `{feature-name}.plan.md`
+- If asked to plan a feature (without implementing it), output your plan there
+- If asked to implement a feature that already has a plan, read the plan file first
+- **Delete the plan file once the feature is fully implemented**
+- This folder is gitignored — local only
+
+See [`/integration/README.md`](/integration/README.md) for full conventions.
+
 ## Commit Guidelines
 
 - Use concise, sentence-style subjects (e.g., `Add custom funding link to FUNDING.yml`)

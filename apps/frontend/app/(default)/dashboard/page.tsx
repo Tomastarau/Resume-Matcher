@@ -17,6 +17,7 @@ import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import Settings from 'lucide-react/dist/esm/icons/settings';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle';
+import FileStack from 'lucide-react/dist/esm/icons/file-stack';
 
 import {
   fetchResume,
@@ -26,6 +27,7 @@ import {
   fetchJobDescription,
   type ResumeListItem,
 } from '@/lib/api/resume';
+import { fetchMasterProfile } from '@/lib/api/master-profile';
 import { useStatusCache } from '@/lib/context/status-cache';
 
 type ProcessingStatus = 'pending' | 'processing' | 'ready' | 'failed' | 'loading';
@@ -38,6 +40,7 @@ export default function DashboardPage() {
   const [tailoredResumes, setTailoredResumes] = useState<ResumeListItem[]>([]);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [hasMasterProfile, setHasMasterProfileState] = useState(false);
   const router = useRouter();
 
   // Status cache for optimistic counter updates and LLM status check
@@ -166,6 +169,28 @@ export default function DashboardPage() {
     loadTailoredResumes();
   }, [loadTailoredResumes]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMasterProfile = async () => {
+      try {
+        const profile = await fetchMasterProfile();
+        if (!cancelled) {
+          setHasMasterProfileState(Boolean(profile));
+        }
+      } catch {
+        if (!cancelled) {
+          setHasMasterProfileState(false);
+        }
+      }
+    };
+
+    loadMasterProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Refresh list when window gains focus (e.g., returning from viewer after delete)
   useEffect(() => {
     const handleFocus = () => {
@@ -286,7 +311,7 @@ export default function DashboardPage() {
     return Math.abs(hash);
   };
 
-  const totalCards = 1 + tailoredResumes.length + 1;
+  const totalCards = 1 + 1 + tailoredResumes.length + 1;
   const fillerCount = Math.max(0, (5 - (totalCards % 5)) % 5);
   const extraFillerCount = 5;
   // Use Tailwind classes for fillers now that we have them in config or use specific hex if needed
@@ -449,6 +474,24 @@ export default function DashboardPage() {
             </div>
           </Card>
         )}
+
+        <Card
+          variant="interactive"
+          className="aspect-square h-full"
+          onClick={() => router.push('/master-profile')}
+        >
+          <div className="flex-1 flex flex-col justify-between">
+            <div className="w-14 h-14 border-2 border-black bg-black text-white flex items-center justify-center mb-4">
+              <FileStack className="w-7 h-7" />
+            </div>
+            <div>
+              <CardTitle className="text-lg uppercase">Master Profile</CardTitle>
+              <CardDescription className="mt-2 text-xs uppercase text-gray-600">
+                {hasMasterProfile ? 'Complete career source' : 'Create or import your full profile'}
+              </CardDescription>
+            </div>
+          </div>
+        </Card>
 
         {/* 2. Tailored Resumes */}
         {tailoredResumes.map((resume) => {

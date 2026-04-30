@@ -7,6 +7,7 @@ LANGUAGE_NAMES = {
     "zh": "Chinese (Simplified)",
     "ja": "Japanese",
     "pt": "Brazilian Portuguese",
+    "fr": "French",
 }
 
 
@@ -130,6 +131,30 @@ Example format:
 Extract numeric years (e.g., "5+ years" → 5) and infer seniority level.
 
 Job description:
+{job_description}"""
+
+MASTER_PROFILE_SELECTION_PROMPT = """Select the most relevant evidence from this master profile for the job description. Output ONLY the JSON object, no other text.
+
+Rules:
+- Select only IDs or exact strings that already exist in the profile
+- Do not invent IDs, skills, languages, or certifications
+- Prioritize direct relevance to the job description
+- Prefer fewer, stronger items over selecting everything
+- Keep personalInfo and summary out of the selection output
+
+Output format:
+{{
+  "workExperience": [1, 3],
+  "projects": [2],
+  "skills": ["Python", "FastAPI"],
+  "languages": ["English"],
+  "certifications": ["AWS Solutions Architect"]
+}}
+
+Master Profile JSON:
+{profile_json}
+
+Job Description:
 {job_description}"""
 
 CRITICAL_TRUTHFULNESS_RULES_TEMPLATE = """CRITICAL TRUTHFULNESS RULES - NEVER VIOLATE:

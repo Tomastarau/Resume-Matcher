@@ -838,5 +838,67 @@
     "clearApiKeysDescription": "Are you sure you want to remove all API keys? You will need to re-enter them to use AI features.",
     "resetDatabase": "Reset Database and Clear All Data?",
     "resetDatabaseDescription": "This will permanently delete ALL resumes, job descriptions, and generated content. This action is irreversible."
+  },
+  "masterProfile": {
+    "label": "Master Profile",
+    "title": "Career inventory",
+    "tailorLink": "Tailor from profile",
+    "unsavedChanges": "Unsaved changes",
+    "importFromCv": "Import from CV",
+    "importing": "Importing...",
+    "saveMasterProfile": "Save Master Profile",
+    "loadError": "Failed to load master profile.",
+    "saveSuccess": "Master Profile saved.",
+    "saveError": "Failed to save master profile.",
+    "importSuccess": "Master Profile imported from CV.",
+    "importError": "Failed to import CV.",
+    "importNoResume": "No uploaded master resume was found. Upload one first to use import.",
+    "sections": {
+      "personalInfo": {
+        "description": "Identity, links, and the reusable summary that will seed each tailored CV."
+      },
+      "workExperience": {
+        "title": "Work Experience",
+        "description": "Keep complete bullet points and list the technologies tied to each role.",
+        "item": "Experience #{id}",
+        "addButton": "Add Experience",
+        "descriptionBullets": "Description Bullets",
+        "descriptionPlaceholder": "One bullet per line"
+      },
+      "projects": {
+        "description": "Track the side projects and portfolio work the selector can pull into tailored resumes.",
+        "item": "Project #{id}",
+        "descriptionBullets": "Description Bullets",
+        "descriptionPlaceholder": "One bullet per line"
+      },
+      "education": {
+        "description": "Keep education available globally so the tailored CV can reuse it when relevant.",
+        "item": "Education #{id}",
+        "addButton": "Add Education",
+        "descriptionPlaceholder": "Optional context"
+      },
+      "skills": {
+        "title": "Skills, Languages, Certifications",
+        "description": "These flat lists are directly available to the selection step.",
+        "tailoringNote": "The tailoring flow now selects from this profile first, then runs the usual improvement pass."
+      }
+    },
+    "fields": {
+      "name": "Name",
+      "title": "Title",
+      "email": "Email",
+      "phone": "Phone",
+      "linkedin": "LinkedIn",
+      "github": "GitHub",
+      "summaryPlaceholder": "Write the broad summary you want the tailoring flow to reuse.",
+      "technologies": "Technologies"
+    },
+    "emptyState": {
+      "title": "Build your full career source.",
+      "description": "Store your complete experience, projects, stack, languages, and certifications here. Tailoring will pick from this profile instead of relying on one uploaded CV.",
+      "startFromScratch": "Start from scratch",
+      "importTooltipEnabled": "Import from your current master resume",
+      "importTooltipDisabled": "Upload a master resume first to use import"
+    }
   }
 }

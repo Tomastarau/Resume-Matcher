@@ -51,3 +51,5 @@ export {
   type PromptConfig,
   type PromptConfigUpdate,
 } from './config';
+
+export { fetchMasterProfile, updateMasterProfile, importCvToMasterProfile } from './master-profile';

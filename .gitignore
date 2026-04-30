@@ -105,3 +105,8 @@ next-env.d.ts
 # Config file with API keys - NEVER COMMIT
 config.json
 **/config.json
+
+# Local planning workspace - not for version control
+/integration/*.md
+!/integration/README.md
+!/integration/_template.plan.md

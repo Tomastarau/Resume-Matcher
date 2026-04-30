@@ -13,6 +13,7 @@ import {
   previewImproveResume,
   confirmImproveResume,
 } from '@/lib/api/resume';
+import { fetchMasterProfile } from '@/lib/api/master-profile';
 import { fetchPromptConfig, type PromptOption } from '@/lib/api/config';
 import { Dropdown } from '@/components/ui/dropdown';
 import { useStatusCache } from '@/lib/context/status-cache';
@@ -26,7 +27,8 @@ export default function TailorPage() {
   const [jobDescription, setJobDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [masterResumeId, setMasterResumeId] = useState<string | null>(null);
+  const [hasMasterProfile, setHasMasterProfile] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [promptOptions, setPromptOptions] = useState<PromptOption[]>([]);
   const [selectedPromptId, setSelectedPromptId] = useState('keywords');
   const [promptLoading, setPromptLoading] = useState(false);
@@ -56,13 +58,32 @@ export default function TailorPage() {
   const isLlmConfigured = !statusLoading && systemStatus?.llm_configured;
 
   useEffect(() => {
-    const storedId = localStorage.getItem('master_resume_id');
-    if (!storedId) {
-      router.push('/dashboard');
-    } else {
-      setMasterResumeId(storedId);
-    }
-  }, [router]);
+    let cancelled = false;
+
+    const loadMasterProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const profile = await fetchMasterProfile();
+        if (!cancelled) {
+          setHasMasterProfile(Boolean(profile));
+        }
+      } catch (loadError) {
+        console.error('Failed to load master profile', loadError);
+        if (!cancelled) {
+          setHasMasterProfile(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    loadMasterProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,9 +118,6 @@ export default function TailorPage() {
   };
 
   const buildConfirmPayload = (result: ImprovedResult) => {
-    if (!masterResumeId) {
-      throw new Error('Master resume ID is missing.');
-    }
     const resumePreview = result.data.resume_preview;
     if (!resumePreview || typeof resumePreview !== 'object' || Array.isArray(resumePreview)) {
       throw new Error('Resume preview data is invalid.');
@@ -113,7 +131,6 @@ export default function TailorPage() {
       throw new Error('Resume preview data is invalid.');
     }
     return {
-      resume_id: masterResumeId,
       job_id: result.data.job_id,
       improved_data: resumePreview as ResumeData,
       improvements:
@@ -121,6 +138,7 @@ export default function TailorPage() {
           suggestion: item.suggestion,
           lineNumber: typeof item.lineNumber === 'number' ? item.lineNumber : null,
         })) ?? [],
+      use_master_profile: true,
     };
   };
 
@@ -146,15 +164,12 @@ export default function TailorPage() {
     return null;
   };
 
-  const runGenerate = async (resumeId: string, description: string) => {
+  const runGenerate = async (description: string) => {
     try {
-      // 1. Upload Job Description
-      // The API expects an array of strings
-      const jobId = await uploadJobDescriptions([description], resumeId);
+      const jobId = await uploadJobDescriptions([description], null);
       incrementJobs(); // Update cached counter
 
-      // 2. Preview Resume
-      const result = await previewImproveResume(resumeId, jobId, selectedPromptId);
+      const result = await previewImproveResume(null, jobId, selectedPromptId, true);
 
       if (!result?.data?.diff_summary || !result?.data?.detailed_changes) {
         console.warn('Diff data missing for tailor preview; requesting user confirmation.');
@@ -196,17 +211,20 @@ export default function TailorPage() {
 
   const handleGenerate = async () => {
     const trimmedDescription = jobDescription.trim();
-    if (!trimmedDescription || !masterResumeId) return;
+    if (!trimmedDescription) return;
+    if (!hasMasterProfile) {
+      setError('Create your Master Profile first before tailoring a resume.');
+      return;
+    }
     const validationError = getGenerateValidationError(trimmedDescription);
     if (validationError) {
       setError(validationError);
       return;
     }
-    const resumeId = masterResumeId;
     setIsLoading(true);
     setError(null);
     try {
-      await runGenerate(resumeId, trimmedDescription);
+      await runGenerate(trimmedDescription);
     } finally {
       setIsLoading(false);
     }
@@ -279,17 +297,16 @@ export default function TailorPage() {
   const handleRegenerateConfirm = async () => {
     setShowRegenerateDialog(false);
     const trimmedDescription = jobDescription.trim();
-    if (!trimmedDescription || !masterResumeId) return;
+    if (!trimmedDescription || !hasMasterProfile) return;
     const validationError = getGenerateValidationError(trimmedDescription);
     if (validationError) {
       setError(validationError);
       return;
     }
-    const resumeId = masterResumeId;
     setIsLoading(true);
     setError(null);
     try {
-      await runGenerate(resumeId, trimmedDescription);
+      await runGenerate(trimmedDescription);
     } finally {
       setIsLoading(false);
     }
@@ -340,6 +357,31 @@ export default function TailorPage() {
                   <Settings className="w-4 h-4" />
                   <span className="font-mono text-xs font-bold uppercase underline">
                     {t('tailor.configureApiKey')}
+                  </span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!profileLoading && !hasMasterProfile && (
+          <div className="mb-6 border-2 border-red-600 bg-red-50 p-4 shadow-[4px_4px_0px_0px_#000000]">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-mono text-sm font-bold uppercase tracking-wider text-red-700">
+                  Master Profile required
+                </p>
+                <p className="font-mono text-xs text-red-700 mt-1">
+                  Tailoring now starts from your Master Profile. Build or import it before
+                  generating a tailored resume.
+                </p>
+                <Link
+                  href="/master-profile"
+                  className="inline-flex items-center gap-2 mt-3 text-red-700 hover:text-red-900 transition-colors"
+                >
+                  <span className="font-mono text-xs font-bold uppercase underline">
+                    Go to Master Profile
                   </span>
                 </Link>
               </div>
@@ -407,7 +449,14 @@ export default function TailorPage() {
           <Button
             size="lg"
             onClick={handleGenerate}
-            disabled={isLoading || statusLoading || !jobDescription.trim() || !isLlmConfigured}
+            disabled={
+              isLoading ||
+              statusLoading ||
+              profileLoading ||
+              !hasMasterProfile ||
+              !jobDescription.trim() ||
+              !isLlmConfigured
+            }
             className="w-full"
           >
             {isLoading ? (
@@ -422,6 +471,10 @@ export default function TailorPage() {
               </>
             ) : !isLlmConfigured ? (
               t('tailor.configureApiKeyFirst')
+            ) : profileLoading ? (
+              'Loading Master Profile'
+            ) : !hasMasterProfile ? (
+              'Create Master Profile First'
             ) : (
               t('tailor.generateTailored')
             )}

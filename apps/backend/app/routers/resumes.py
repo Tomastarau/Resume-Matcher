@@ -46,7 +46,12 @@ from app.services.improver import (
     generate_improvements,
     improve_resume,
 )
+from app.services.master_profile import load_master_profile
 from app.services.refiner import refine_resume, calculate_keyword_match
+from app.services.selector import (
+    build_full_resume_from_profile,
+    select_master_profile_subset,
+)
 from app.schemas.refinement import RefinementConfig
 from app.services.cover_letter import (
     generate_cover_letter,
@@ -181,18 +186,14 @@ def _preserve_personal_info(
     return result, warnings
 
 
-def _calculate_diff_from_resume(
-    resume: dict[str, Any],
+
+def _calculate_diff_from_data(
+    original_data: dict[str, Any] | None,
     improved_data: dict[str, Any],
 ) -> tuple[ResumeDiffSummary | None, list[ResumeFieldDiff] | None, str | None]:
-    """Calculate resume diffs when structured data is available.
-
-    Returns (summary, changes, error_reason). Error reason is None on success,
-    or a string describing why diff calculation failed.
-    """
-    original_data = _get_original_resume_data(resume)
     if not original_data:
         return None, None, "original_data_missing"
+
     from app.services.improver import calculate_resume_diff
 
     try:
@@ -201,6 +202,86 @@ def _calculate_diff_from_resume(
     except Exception as e:
         logger.warning("Skipping resume diff due to calculation failure: %s", e)
         return None, None, f"calculation_error: {str(e)}"
+
+
+def _serialize_resume_source(data: dict[str, Any]) -> str:
+    return json.dumps(data, indent=2, ensure_ascii=False)
+
+
+async def _build_resume_source_context(
+    request: ImproveResumeRequest,
+    job_content: str,
+) -> dict[str, Any]:
+    if request.use_master_profile:
+        profile = load_master_profile()
+        if profile is None:
+            raise HTTPException(status_code=404, detail="Master profile not found")
+
+        _, subset_data = await select_master_profile_subset(profile, job_content)
+        return {
+            "mode": "master_profile",
+            "resume": None,
+            "source_data": subset_data,
+            "original_text": _serialize_resume_source(subset_data),
+            "filename": "master_profile",
+            "parent_id": None,
+            "master_data": build_full_resume_from_profile(profile),
+        }
+
+    if not request.resume_id:
+        raise HTTPException(status_code=400, detail="Resume not found")
+
+    resume = db.get_resume(request.resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    return {
+        "mode": "resume",
+        "resume": resume,
+        "source_data": _get_original_resume_data(resume),
+        "original_text": resume["content"],
+        "filename": resume.get("filename", "resume"),
+        "parent_id": request.resume_id,
+        "master_data": _get_refinement_master_data(resume),
+    }
+
+
+def _get_refinement_master_data(resume: dict[str, Any]) -> dict[str, Any] | None:
+    profile = load_master_profile()
+    if profile is not None:
+        return build_full_resume_from_profile(profile)
+
+    master_resume = db.get_master_resume()
+    if master_resume:
+        return _get_original_resume_data(master_resume)
+
+    return _get_original_resume_data(resume)
+
+
+def _store_preview_context(
+    job_id: str,
+    *,
+    prompt_id: str,
+    preview_hash: str,
+    source_mode: str,
+    source_data: dict[str, Any] | None,
+    parent_id: str | None,
+) -> None:
+    preview_hashes = db.get_job(job_id).get("preview_hashes") if db.get_job(job_id) else None
+    if not isinstance(preview_hashes, dict):
+        preview_hashes = {}
+    preview_hashes[prompt_id] = preview_hash
+    db.update_job(
+        job_id,
+        {
+            "preview_hash": preview_hash,
+            "preview_prompt_id": prompt_id,
+            "preview_hashes": preview_hashes,
+            "preview_source_mode": source_mode,
+            "preview_source_data": source_data,
+            "preview_parent_id": parent_id,
+        },
+    )
 
 
 def _validate_confirm_payload(
@@ -463,13 +544,11 @@ async def improve_resume_preview_endpoint(
 
     The response includes resume_preview data but leaves resume_id null.
     """
-    resume = db.get_resume(request.resume_id)
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-
     job = db.get_job(request.job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job description not found")
+
+    source_context = await _build_resume_source_context(request, job["content"])
 
     language = _get_content_language()
     prompt_id = request.prompt_id or _get_default_prompt_id()
@@ -503,17 +582,18 @@ async def improve_resume_preview_endpoint(
                 )
         stage = "improve_resume"
         improved_data = await improve_resume(
-            original_resume=resume["content"],
+            original_resume=source_context["original_text"],
             job_description=job["content"],
             job_keywords=job_keywords,
             language=language,
             prompt_id=prompt_id,
+            source_data=source_context["source_data"],
         )
         # Collect warnings throughout the process
         response_warnings: list[str] = []
 
         improved_data, preserve_warnings = _preserve_personal_info(
-            _get_original_resume_data(resume),
+            source_context["source_data"],
             improved_data,
         )
         response_warnings.extend(preserve_warnings)
@@ -524,13 +604,7 @@ async def improve_resume_preview_endpoint(
         refinement_attempted = False
         refinement_successful = False
         try:
-            # Get master resume for alignment validation
-            master_resume = db.get_master_resume()
-            master_data = (
-                _get_original_resume_data(master_resume)
-                if master_resume
-                else _get_original_resume_data(resume)
-            )
+            master_data = source_context["master_data"]
             if master_data:
                 initial_match = calculate_keyword_match(improved_data, job_keywords)
                 refinement_attempted = True
@@ -541,7 +615,7 @@ async def improve_resume_preview_endpoint(
                     job_keywords=job_keywords,
                     config=RefinementConfig(),
                 )
-                improved_data = refinement_result.refined_data
+                improved_data = normalize_resume_data(refinement_result.refined_data)
                 refinement_stats = RefinementStats(
                     passes_completed=refinement_result.passes_completed,
                     keywords_injected=(
@@ -577,31 +651,22 @@ async def improve_resume_preview_endpoint(
 
         improved_text = json.dumps(improved_data, indent=2)
         preview_hash = _hash_improved_data(improved_data)
-        preview_hashes = job.get("preview_hashes")
-        if not isinstance(preview_hashes, dict):
-            preview_hashes = {}
-        preview_hashes[prompt_id] = preview_hash
-        # NOTE: preview_hashes updates are last-write-wins; concurrent previews can race.
         try:
-            updated_job = db.update_job(
+            _store_preview_context(
                 request.job_id,
-                {
-                    "preview_hash": preview_hash,
-                    "preview_prompt_id": prompt_id,
-                    "preview_hashes": preview_hashes,
-                },
+                prompt_id=prompt_id,
+                preview_hash=preview_hash,
+                source_mode=source_context["mode"],
+                source_data=source_context["source_data"],
+                parent_id=source_context["parent_id"],
             )
-            if not updated_job:
-                logger.warning(
-                    "Failed to persist preview hash for job %s.", request.job_id
-                )
         except Exception as e:
             logger.warning(
                 "Failed to persist preview hash for job %s: %s", request.job_id, e
             )
         stage = "calculate_diff"
-        diff_summary, detailed_changes, diff_error = _calculate_diff_from_resume(
-            resume,
+        diff_summary, detailed_changes, diff_error = _calculate_diff_from_data(
+            source_context["source_data"],
             improved_data,
         )
         if diff_error:
@@ -624,7 +689,7 @@ async def improve_resume_preview_endpoint(
                     }
                     for imp in improvements
                 ],
-                markdownOriginal=resume["content"],
+                markdownOriginal=source_context["original_text"],
                 markdownImproved=improved_text,
                 cover_letter=None,
                 outreach_message=None,
@@ -645,13 +710,18 @@ async def improve_resume_confirm_endpoint(
     request: ImproveResumeConfirmRequest,
 ) -> ImproveResumeResponse:
     """Confirm and persist a tailored resume."""
-    resume = db.get_resume(request.resume_id)
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-
     job = db.get_job(request.job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job description not found")
+
+    source_mode = (
+        "master_profile"
+        if request.use_master_profile
+        else job.get("preview_source_mode", "resume")
+    )
+    resume = db.get_resume(request.resume_id) if request.resume_id else None
+    if source_mode == "resume" and not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
 
     feature_config = _load_feature_config()
     enable_cover_letter = feature_config.get("enable_cover_letter", False)
@@ -663,10 +733,20 @@ async def improve_resume_confirm_endpoint(
     try:
         improved_data = request.improved_data.model_dump()
         improved_text = json.dumps(improved_data, indent=2)
+        source_data = (
+            job.get("preview_source_data")
+            if source_mode == "master_profile"
+            else _get_original_resume_data(resume or {})
+        )
+        original_text = (
+            _serialize_resume_source(source_data)
+            if source_mode == "master_profile" and isinstance(source_data, dict)
+            else (resume["content"] if resume else None)
+        )
         # NOTE: This endpoint relies on preview-hash validation to ensure the payload matches a prior preview.
         # Stronger guarantees would require server-side preview storage or re-running the improvement.
         try:
-            _validate_confirm_payload(_get_original_resume_data(resume), improved_data)
+            _validate_confirm_payload(source_data, improved_data)
         except ValueError as e:
             logger.warning("Resume confirm rejected: %s", e)
             raise HTTPException(
@@ -706,8 +786,8 @@ async def improve_resume_confirm_endpoint(
 
         stage = "calculate_diff"
         response_warnings: list[str] = []
-        diff_summary, detailed_changes, diff_error = _calculate_diff_from_resume(
-            resume,
+        diff_summary, detailed_changes, diff_error = _calculate_diff_from_data(
+            source_data,
             improved_data,
         )
         if diff_error:
@@ -732,9 +812,9 @@ async def improve_resume_confirm_endpoint(
         tailored_resume = db.create_resume(
             content=improved_text,
             content_type="json",
-            filename=f"tailored_{resume.get('filename', 'resume')}",
+            filename=f"tailored_{(resume.get('filename', 'resume') if resume else 'master_profile')}",
             is_master=False,
-            parent_id=request.resume_id,
+            parent_id=request.resume_id if source_mode == "resume" else None,
             processed_data=improved_data,
             processing_status="ready",
             cover_letter=cover_letter,
@@ -746,7 +826,7 @@ async def improve_resume_confirm_endpoint(
         stage = "create_improvement"
         request_id = str(uuid4())
         db.create_improvement(
-            original_resume_id=request.resume_id,
+            original_resume_id=request.resume_id or "master_profile",
             tailored_resume_id=tailored_resume["resume_id"],
             job_id=request.job_id,
             improvements=improvements_payload,
@@ -760,7 +840,7 @@ async def improve_resume_confirm_endpoint(
                 job_id=request.job_id,
                 resume_preview=request.improved_data,
                 improvements=request.improvements,
-                markdownOriginal=resume["content"],
+                markdownOriginal=original_text,
                 markdownImproved=improved_text,
                 cover_letter=cover_letter,
                 outreach_message=outreach_message,
@@ -786,15 +866,13 @@ async def improve_resume_endpoint(
     message if enabled in feature configuration.
     Persists the tailored resume and returns a non-null resume_id.
     """
-    # Fetch resume
-    resume = db.get_resume(request.resume_id)
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-
     # Fetch job description
     job = db.get_job(request.job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job description not found")
+
+    source_context = await _build_resume_source_context(request, job["content"])
+    resume = source_context["resume"]
 
     # Load feature configuration and content language
     feature_config = _load_feature_config()
@@ -810,17 +888,18 @@ async def improve_resume_endpoint(
         prompt_id = request.prompt_id or _get_default_prompt_id()
 
         improved_data = await improve_resume(
-            original_resume=resume["content"],
+            original_resume=source_context["original_text"],
             job_description=job["content"],
             job_keywords=job_keywords,
             language=language,
             prompt_id=prompt_id,
+            source_data=source_context["source_data"],
         )
         # Collect warnings throughout the process
         response_warnings: list[str] = []
 
         improved_data, preserve_warnings = _preserve_personal_info(
-            _get_original_resume_data(resume),
+            source_context["source_data"],
             improved_data,
         )
         response_warnings.extend(preserve_warnings)
@@ -830,13 +909,7 @@ async def improve_resume_endpoint(
         refinement_attempted = False
         refinement_successful = False
         try:
-            # Get master resume for alignment validation
-            master_resume = db.get_master_resume()
-            master_data = (
-                _get_original_resume_data(master_resume)
-                if master_resume
-                else _get_original_resume_data(resume)
-            )
+            master_data = source_context["master_data"]
             if master_data:
                 initial_match = calculate_keyword_match(improved_data, job_keywords)
                 refinement_attempted = True
@@ -847,7 +920,7 @@ async def improve_resume_endpoint(
                     job_keywords=job_keywords,
                     config=RefinementConfig(),
                 )
-                improved_data = refinement_result.refined_data
+                improved_data = normalize_resume_data(refinement_result.refined_data)
                 refinement_stats = RefinementStats(
                     passes_completed=refinement_result.passes_completed,
                     keywords_injected=(
@@ -885,8 +958,8 @@ async def improve_resume_endpoint(
         improved_text = json.dumps(improved_data, indent=2)
 
         # Calculate differences between original and improved resume
-        diff_summary, detailed_changes, diff_error = _calculate_diff_from_resume(
-            resume,
+        diff_summary, detailed_changes, diff_error = _calculate_diff_from_data(
+            source_context["source_data"],
             improved_data,
         )
         if diff_error:
@@ -914,9 +987,9 @@ async def improve_resume_endpoint(
         tailored_resume = db.create_resume(
             content=improved_text,
             content_type="json",
-            filename=f"tailored_{resume.get('filename', 'resume')}",
+            filename=f"tailored_{source_context['filename']}",
             is_master=False,
-            parent_id=request.resume_id,
+            parent_id=source_context["parent_id"],
             processed_data=improved_data,
             processing_status="ready",
             cover_letter=cover_letter,
@@ -927,7 +1000,7 @@ async def improve_resume_endpoint(
         # Store improvement record
         request_id = str(uuid4())
         db.create_improvement(
-            original_resume_id=request.resume_id,
+            original_resume_id=request.resume_id or "master_profile",
             tailored_resume_id=tailored_resume["resume_id"],
             job_id=request.job_id,
             improvements=improvements,
@@ -947,7 +1020,7 @@ async def improve_resume_endpoint(
                     }
                     for imp in improvements
                 ],
-                markdownOriginal=resume["content"],
+                markdownOriginal=source_context["original_text"],
                 markdownImproved=improved_text,
                 cover_letter=cover_letter,
                 outreach_message=outreach_message,

@@ -78,13 +78,14 @@ export interface ResumeUploadResponse {
 }
 
 interface ImproveResumeConfirmRequest {
-  resume_id: string;
+  resume_id?: string | null;
   job_id: string;
   improved_data: ResumeData;
   improvements: Array<{
     suggestion: string;
     lineNumber?: number | null;
   }>;
+  use_master_profile?: boolean;
 }
 
 function normalizeResumeId(resumeId: string): string {
@@ -137,11 +138,11 @@ async function postImprove(
 /** Uploads job descriptions and returns a job_id */
 export async function uploadJobDescriptions(
   descriptions: string[],
-  resumeId: string
+  resumeId?: string | null
 ): Promise<string> {
   const res = await apiPost('/jobs/upload', {
     job_descriptions: descriptions,
-    resume_id: resumeId,
+    resume_id: resumeId ?? null,
   });
   if (!res.ok) throw new Error(`Upload failed with status ${res.status}`);
   const data = await res.json();
@@ -150,27 +151,31 @@ export async function uploadJobDescriptions(
 
 /** Improves the resume and returns the full preview object */
 export async function improveResume(
-  resumeId: string,
+  resumeId: string | null,
   jobId: string,
-  promptId?: string
+  promptId?: string,
+  useMasterProfile = false
 ): Promise<ImprovedResult> {
   return postImprove('/resumes/improve', {
     resume_id: resumeId,
     job_id: jobId,
     prompt_id: promptId ?? null,
+    use_master_profile: useMasterProfile,
   });
 }
 
 /** Previews the resume improvement without saving */
 export async function previewImproveResume(
-  resumeId: string,
+  resumeId: string | null,
   jobId: string,
-  promptId?: string
+  promptId?: string,
+  useMasterProfile = false
 ): Promise<ImprovedResult> {
   return postImprove('/resumes/improve/preview', {
     resume_id: resumeId,
     job_id: jobId,
     prompt_id: promptId ?? null,
+    use_master_profile: useMasterProfile,
   });
 }
 

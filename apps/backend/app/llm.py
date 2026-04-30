@@ -343,7 +343,7 @@ async def check_llm_health(
         kwargs: dict[str, Any] = {
             "model": model_name,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 16,
+            "max_tokens": 64,
             "api_key": config.api_key,
             "api_base": _normalize_api_base(config.provider, config.api_base),
             "timeout": LLM_TIMEOUT_HEALTH_CHECK,
@@ -471,37 +471,6 @@ def _supports_json_mode(provider: str, model: str) -> bool:
         return model in OPENROUTER_JSON_CAPABLE_MODELS
     return False
 
-
-def _appears_truncated(data: dict) -> bool:
-    """LLM-001: Check if JSON data appears to be truncated.
-
-    Detects suspicious patterns indicating incomplete responses.
-    """
-    if not isinstance(data, dict):
-        return False
-
-    # Check for empty arrays that should typically have content
-    suspicious_empty_arrays = ["workExperience", "education", "skills"]
-    for key in suspicious_empty_arrays:
-        if key in data and data[key] == []:
-            # Log warning - these are rarely empty in real resumes
-            logging.warning(
-                "Possible truncation detected: '%s' is empty",
-                key,
-            )
-            return True
-
-    # Check for missing critical sections
-    required_top_level = ["personalInfo"]
-    for key in required_top_level:
-        if key not in data:
-            logging.warning(
-                "Possible truncation detected: missing required section '%s'",
-                key,
-            )
-            return True
-
-    return False
 
 
 def _get_retry_temperature(attempt: int, base_temp: float = 0.1) -> float:
@@ -685,23 +654,6 @@ async def complete_json(
             # Extract and parse JSON
             json_str = _extract_json(content)
             result = json.loads(json_str)
-
-            # LLM-001: Check if parsed result appears truncated
-            if isinstance(result, dict) and _appears_truncated(result):
-                if attempt < retries:
-                    logging.warning(
-                        "Parsed JSON appears truncated (attempt %d/%d), retrying",
-                        attempt + 1,
-                        retries + 1,
-                    )
-                    messages[-1]["content"] = (
-                        prompt
-                        + "\n\nIMPORTANT: Output the COMPLETE JSON object with ALL sections including personalInfo. Do not truncate."
-                    )
-                    continue
-                logging.warning(
-                    "Parsed JSON appears truncated on final attempt, proceeding with result"
-                )
 
             return result
 
