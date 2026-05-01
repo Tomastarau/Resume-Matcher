@@ -36,6 +36,7 @@ async def rewrite_selected_items(
         full_items=json.dumps(full_items, indent=2, ensure_ascii=False),
         fallback_items=json.dumps(fallback_items, indent=2, ensure_ascii=False),
         profile_skills=json.dumps(profile_skills, ensure_ascii=False),
+        current_summary=subset.get("summary", ""),
         job_description=job_description,
     )
 
@@ -113,6 +114,12 @@ def _merge_rewritten(
 
     exp_index = {item["id"]: i for i, item in enumerate(merged.get("workExperience", []))}
     proj_index = {item["id"]: i for i, item in enumerate(merged.get("personalProjects", []))}
+
+    rewritten_summary = result.get("summary")
+    if isinstance(rewritten_summary, str):
+        summary = rewritten_summary.strip()
+        if summary:
+            merged["summary"] = summary
 
     for item in result.get("workExperience", []):
         item_id = item.get("id")

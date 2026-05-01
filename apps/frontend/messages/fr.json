@@ -531,6 +531,7 @@
     "diffModal": {
       "title": "Vérifier les résultats de l'adaptation IA",
       "subtitle": "Vérifiez soigneusement les modifications pour vous assurer qu'aucune information erronée n'a été ajoutée",
+      "fallbackWarnings": "Avertissements à vérifier",
       "summary": "Résumé des modifications",
       "skillsAdded": "Compétences ajoutées",
       "skillsRemoved": "Compétences supprimées",

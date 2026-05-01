@@ -136,6 +136,10 @@ Job description:
 MASTER_PROFILE_SELECTION_PROMPT = """Select the most relevant evidence from this master profile for the job description. Output ONLY the JSON object, no other text.
 
 Rules:
+- You are given both the raw job description and a structured summary of its requirements
+- Rank work experiences and projects by relevance to the PRIMARY skill domain of the role (most relevant first)
+- Required skills and key responsibilities matter more than isolated secondary mentions
+- Do not over-weight single keyword matches — prefer items that demonstrate the core skill domain of the role
 - Select up to 2 work experiences and up to 3 projects, ranked by relevance to the job (most relevant first)
 - Always try to fill the quota: if 3 projects exist with any connection to the job, select 3
 - A project is relevant if it shares technologies, domain, or problem type with the job — even partial overlap counts
@@ -156,11 +160,22 @@ Output format:
 Master Profile JSON:
 {profile_json}
 
+Structured Job Requirements:
+{job_keywords}
+
 Job Description:
 {job_description}"""
 
 
 MASTER_PROFILE_REWRITE_PROMPT = """Rewrite the bullet points of the selected resume items to better support this job application. Output ONLY the JSON object, no other text.
+
+Rules for summary:
+- Rewrite the summary to lead with the most relevant skills and experience for this role
+- You may reframe the professional title if the selected projects and experiences clearly support it
+- You may remove mentions of technologies or domains that are not relevant to this job
+- Keep the summary to 2-3 sentences maximum
+- Do not change seniority level
+- Do not invent experience, qualifications, or certifications
 
 Rules for descriptions:
 - Keep the same number of bullets per item — do not add or remove bullets
@@ -185,11 +200,15 @@ Items to rewrite lightly (fallback only — not directly relevant to this job):
 Full profile skills list (filter from this — do not add skills outside this list):
 {profile_skills}
 
+Current summary:
+{current_summary}
+
 Job Description:
 {job_description}
 
 Output format:
 {{
+  "summary": "Rewritten summary",
   "workExperience": [
     {{"id": 1, "description": ["rewritten bullet", "rewritten bullet"]}}
   ],

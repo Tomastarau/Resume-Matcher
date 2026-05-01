@@ -116,6 +116,12 @@ export function DiffPreviewModal({
         {/* Fallback warnings */}
         {warnings && warnings.length > 0 && (
           <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-[#F97316]"></div>
+              <h3 className="font-mono text-sm font-bold uppercase tracking-wider">
+                {t('tailor.diffModal.fallbackWarnings')}
+              </h3>
+            </div>
             {warnings.map((key) => (
               <div
                 key={key}

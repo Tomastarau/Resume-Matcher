@@ -531,6 +531,7 @@
     "diffModal": {
       "title": "Review AI Tailoring Results",
       "subtitle": "Please carefully review the changes to ensure no false information has been added",
+      "fallbackWarnings": "Review Warnings",
       "summary": "Change Summary",
       "skillsAdded": "Skills Added",
       "skillsRemoved": "Skills Removed",

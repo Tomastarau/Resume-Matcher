@@ -211,19 +211,24 @@ def _serialize_resume_source(data: dict[str, Any]) -> str:
 async def _build_resume_source_context(
     request: ImproveResumeRequest,
     job_content: str,
+    job_keywords: dict[str, Any],
 ) -> dict[str, Any]:
     if request.use_master_profile:
         profile = load_master_profile()
         if profile is None:
             raise HTTPException(status_code=404, detail="Master profile not found")
 
-        _, raw_subset, rewritten_subset, selection_warnings = await select_master_profile_subset(profile, job_content)
+        _, raw_subset, rewritten_subset, selection_warnings = await select_master_profile_subset(
+            profile,
+            job_content,
+            job_keywords,
+        )
         return {
             "mode": "master_profile",
             "resume": None,
             "source_data": raw_subset,
             "improve_source": rewritten_subset,
-            "original_text": _serialize_resume_source(raw_subset),
+            "original_text": _serialize_resume_source(rewritten_subset),
             "filename": "master_profile",
             "parent_id": None,
             "master_data": build_full_resume_from_profile(profile),
@@ -553,8 +558,6 @@ async def improve_resume_preview_endpoint(
     if not job:
         raise HTTPException(status_code=404, detail="Job description not found")
 
-    source_context = await _build_resume_source_context(request, job["content"])
-
     language = _get_content_language()
     prompt_id = request.prompt_id or _get_default_prompt_id()
 
@@ -585,6 +588,11 @@ async def improve_resume_preview_endpoint(
                     request.job_id,
                     e,
                 )
+        source_context = await _build_resume_source_context(
+            request,
+            job["content"],
+            job_keywords,
+        )
         stage = "improve_resume"
         improved_data = await improve_resume(
             original_resume=source_context["original_text"],
@@ -876,9 +884,6 @@ async def improve_resume_endpoint(
     if not job:
         raise HTTPException(status_code=404, detail="Job description not found")
 
-    source_context = await _build_resume_source_context(request, job["content"])
-    resume = source_context["resume"]
-
     # Load feature configuration and content language
     feature_config = _load_feature_config()
     enable_cover_letter = feature_config.get("enable_cover_letter", False)
@@ -888,6 +893,12 @@ async def improve_resume_endpoint(
     try:
         # Extract keywords from job description
         job_keywords = await extract_job_keywords(job["content"])
+        source_context = await _build_resume_source_context(
+            request,
+            job["content"],
+            job_keywords,
+        )
+        resume = source_context["resume"]
 
         # Generate improved resume in the configured language
         prompt_id = request.prompt_id or _get_default_prompt_id()

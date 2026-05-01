@@ -29,6 +29,7 @@ class MasterProfileSelection(BaseModel):
 async def select_master_profile_subset(
     profile_data: dict[str, Any],
     job_description: str,
+    job_keywords: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], list[str]]:
     """Select relevant profile items, rewrite them, and return all stages.
 
@@ -40,6 +41,7 @@ async def select_master_profile_subset(
     profile = MasterProfile.model_validate(profile_data)
     prompt = MASTER_PROFILE_SELECTION_PROMPT.format(
         profile_json=json.dumps(profile.model_dump(), indent=2, ensure_ascii=False),
+        job_keywords=json.dumps(job_keywords, indent=2, ensure_ascii=False),
         job_description=job_description,
     )
     result = await complete_json(
@@ -72,10 +74,14 @@ def _apply_caps_and_fallback(
     warnings: list[str] = []
     result = dict(selection)
 
-    exp_ids: list[int] = result.get("workExperience", [])[:MAX_WORK_EXPERIENCE]
-    if not exp_ids and profile.get("workExperience"):
-        exp_ids = [profile["workExperience"][0]["id"]]
-        warnings.append(WARNING_NO_RELEVANT_WORK_EXPERIENCE)
+    all_experience = profile.get("workExperience", [])
+    if len(all_experience) <= MAX_WORK_EXPERIENCE:
+        exp_ids = [item["id"] for item in all_experience]
+    else:
+        exp_ids = result.get("workExperience", [])[:MAX_WORK_EXPERIENCE]
+        if not exp_ids and all_experience:
+            exp_ids = [all_experience[0]["id"]]
+            warnings.append(WARNING_NO_RELEVANT_WORK_EXPERIENCE)
     result["workExperience"] = exp_ids
 
     project_ids: list[int] = result.get("projects", [])[:MAX_PROJECTS]
