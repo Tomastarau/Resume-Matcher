@@ -566,6 +566,10 @@
       "failedToGenerate": "Failed to generate resume. Please check your settings and try again.",
       "failedToPreview": "Failed to preview resume. Please check your settings and try again.",
       "failedToConfirm": "Failed to confirm resume. Please try again."
+    },
+    "warnings": {
+      "noRelevantWorkExperience": "No relevant work experience found. Added most recent as fallback.",
+      "noRelevantProject": "No relevant project found. Added most recent as fallback."
     }
   },
   "settings": {

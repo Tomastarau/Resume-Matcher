@@ -18,6 +18,7 @@ interface DiffPreviewModalProps {
   diffSummary?: ResumeDiffSummary;
   detailedChanges?: ResumeFieldDiff[];
   errorMessage?: string;
+  warnings?: string[];
 }
 
 export function DiffPreviewModal({
@@ -28,6 +29,7 @@ export function DiffPreviewModal({
   diffSummary,
   detailedChanges,
   errorMessage,
+  warnings,
 }: DiffPreviewModalProps) {
   const { t } = useTranslations();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -110,6 +112,21 @@ export function DiffPreviewModal({
             {t('tailor.diffModal.subtitle')}
           </p>
         </DialogHeader>
+
+        {/* Fallback warnings */}
+        {warnings && warnings.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {warnings.map((key) => (
+              <div
+                key={key}
+                className="flex items-start gap-2 border-2 border-[#F97316] bg-[#FFF7ED] p-3"
+              >
+                <AlertTriangle className="w-4 h-4 text-[#F97316] mt-0.5 shrink-0" />
+                <span className="font-mono text-xs text-[#F97316]">{t(key)}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Summary cards */}
         <div className="border-2 border-black bg-white p-4 mt-4">

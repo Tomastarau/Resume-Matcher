@@ -266,6 +266,10 @@ def validate_master_alignment(
         for s in master.get("additional", {}).get("technicalSkills", [])
         if isinstance(s, str)
     )
+    for exp in master.get("workExperience", []):
+        master_skills.update(t.lower() for t in exp.get("technologies", []) if isinstance(t, str))
+    for proj in master.get("personalProjects", []):
+        master_skills.update(t.lower() for t in proj.get("technologies", []) if isinstance(t, str))
 
     for skill in tailored_skills - master_skills:
         violations.append(

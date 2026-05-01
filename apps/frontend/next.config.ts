@@ -4,8 +4,12 @@ const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN || 'http://127.0.0.1:8000';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  httpAgentOptions: {
+    keepAlive: true,
+  },
   experimental: {
     turbopackUseSystemTlsCerts: true,
+    proxyTimeout: 120000,
   },
   async rewrites() {
     // Note: Next.js serves filesystem routes (app/api/) before rewrites.

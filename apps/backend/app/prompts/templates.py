@@ -136,10 +136,12 @@ Job description:
 MASTER_PROFILE_SELECTION_PROMPT = """Select the most relevant evidence from this master profile for the job description. Output ONLY the JSON object, no other text.
 
 Rules:
+- Select up to 2 work experiences and up to 3 projects, ranked by relevance to the job (most relevant first)
+- Always try to fill the quota: if 3 projects exist with any connection to the job, select 3
+- A project is relevant if it shares technologies, domain, or problem type with the job — even partial overlap counts
+- Prefer direct relevance over recency, but recency beats no selection
 - Select only IDs or exact strings that already exist in the profile
 - Do not invent IDs, skills, languages, or certifications
-- Prioritize direct relevance to the job description
-- Prefer fewer, stronger items over selecting everything
 - Keep personalInfo and summary out of the selection output
 
 Output format:
@@ -156,6 +158,47 @@ Master Profile JSON:
 
 Job Description:
 {job_description}"""
+
+
+MASTER_PROFILE_REWRITE_PROMPT = """Rewrite the bullet points of the selected resume items to better support this job application. Output ONLY the JSON object, no other text.
+
+Rules for descriptions:
+- Keep the same number of bullets per item — do not add or remove bullets
+- Make each bullet more informative and specific to what matters for this job
+- Distribute angles across items: each item should highlight a different dimension (technical depth, impact, methodology, results, scale, etc.)
+- For fallback items (marked below), keep the rewrite light and factual — do not over-sell them
+- Never mention the job offer explicitly in descriptions
+- Never invent skills, technologies, responsibilities, or achievements not present in the original
+
+Rules for skills:
+- Read the technologies and description fields of all selected items
+- From the full profile skills list, keep only skills that have a connection to the selected items (appear in technologies or can be inferred from descriptions)
+- Order the resulting skills list by relevance to the job, most relevant first
+- Do not add skills that are not in the full profile skills list
+
+Items to rewrite with full emphasis:
+{full_items}
+
+Items to rewrite lightly (fallback only — not directly relevant to this job):
+{fallback_items}
+
+Full profile skills list (filter from this — do not add skills outside this list):
+{profile_skills}
+
+Job Description:
+{job_description}
+
+Output format:
+{{
+  "workExperience": [
+    {{"id": 1, "description": ["rewritten bullet", "rewritten bullet"]}}
+  ],
+  "projects": [
+    {{"id": 3, "description": ["rewritten bullet"]}},
+    {{"id": 4, "description": ["rewritten bullet"]}}
+  ],
+  "skills": ["MostRelevantSkill", "SecondSkill"]
+}}"""
 
 CRITICAL_TRUTHFULNESS_RULES_TEMPLATE = """CRITICAL TRUTHFULNESS RULES - NEVER VIOLATE:
 1. DO NOT add any skill, tool, technology, or certification that is not explicitly mentioned in the original resume

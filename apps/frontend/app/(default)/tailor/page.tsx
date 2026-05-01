@@ -492,6 +492,7 @@ export default function TailorPage() {
           diffSummary={pendingResult?.data?.diff_summary}
           detailedChanges={pendingResult?.data?.detailed_changes}
           errorMessage={diffConfirmError ?? undefined}
+          warnings={pendingResult?.data?.warnings}
         />
       )}
 

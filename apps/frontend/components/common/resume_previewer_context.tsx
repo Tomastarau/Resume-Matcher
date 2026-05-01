@@ -98,6 +98,7 @@ export interface Data {
   outreach_message?: string;
   diff_summary?: ResumeDiffSummary;
   detailed_changes?: ResumeFieldDiff[];
+  warnings?: string[];
 }
 
 export interface ImprovedResult {

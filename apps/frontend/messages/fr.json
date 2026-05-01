@@ -566,6 +566,10 @@
       "failedToGenerate": "Échec de la génération du CV. Vérifiez vos paramètres et réessayez.",
       "failedToPreview": "Échec de l'aperçu du CV. Vérifiez vos paramètres et réessayez.",
       "failedToConfirm": "Échec de la confirmation du CV. Veuillez réessayer."
+    },
+    "warnings": {
+      "noRelevantWorkExperience": "Aucune expérience professionnelle pertinente trouvée. La plus récente a été ajoutée par défaut.",
+      "noRelevantProject": "Aucun projet pertinent trouvé. Le plus récent a été ajouté par défaut."
     }
   },
   "settings": {

@@ -217,15 +217,17 @@ async def _build_resume_source_context(
         if profile is None:
             raise HTTPException(status_code=404, detail="Master profile not found")
 
-        _, subset_data = await select_master_profile_subset(profile, job_content)
+        _, raw_subset, rewritten_subset, selection_warnings = await select_master_profile_subset(profile, job_content)
         return {
             "mode": "master_profile",
             "resume": None,
-            "source_data": subset_data,
-            "original_text": _serialize_resume_source(subset_data),
+            "source_data": raw_subset,
+            "improve_source": rewritten_subset,
+            "original_text": _serialize_resume_source(raw_subset),
             "filename": "master_profile",
             "parent_id": None,
             "master_data": build_full_resume_from_profile(profile),
+            "warnings": selection_warnings,
         }
 
     if not request.resume_id:
@@ -235,14 +237,17 @@ async def _build_resume_source_context(
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
+    original_data = _get_original_resume_data(resume)
     return {
         "mode": "resume",
         "resume": resume,
-        "source_data": _get_original_resume_data(resume),
+        "source_data": original_data,
+        "improve_source": original_data,
         "original_text": resume["content"],
         "filename": resume.get("filename", "resume"),
         "parent_id": request.resume_id,
         "master_data": _get_refinement_master_data(resume),
+        "warnings": [],
     }
 
 
@@ -587,10 +592,10 @@ async def improve_resume_preview_endpoint(
             job_keywords=job_keywords,
             language=language,
             prompt_id=prompt_id,
-            source_data=source_context["source_data"],
+            source_data=source_context["improve_source"],
         )
         # Collect warnings throughout the process
-        response_warnings: list[str] = []
+        response_warnings: list[str] = list(source_context.get("warnings", []))
 
         improved_data, preserve_warnings = _preserve_personal_info(
             source_context["source_data"],
@@ -893,10 +898,10 @@ async def improve_resume_endpoint(
             job_keywords=job_keywords,
             language=language,
             prompt_id=prompt_id,
-            source_data=source_context["source_data"],
+            source_data=source_context["improve_source"],
         )
         # Collect warnings throughout the process
-        response_warnings: list[str] = []
+        response_warnings: list[str] = list(source_context.get("warnings", []))
 
         improved_data, preserve_warnings = _preserve_personal_info(
             source_context["source_data"],
