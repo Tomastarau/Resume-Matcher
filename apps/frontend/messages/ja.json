@@ -547,7 +547,8 @@
       "projectChanges": "プロジェクトの変更",
       "certificationChanges": "資格の変更",
       "rejectButton": "拒否して再生成",
-      "confirmButton": "確認して保存"
+      "confirmButton": "確認して保存",
+      "fallbackWarnings": "警告を確認"
     },
     "regenerateDialog": {
       "title": "カスタマイズ済み履歴書を再生成しますか？",
@@ -566,6 +567,12 @@
       "failedToGenerate": "履歴書の生成に失敗しました。設定を確認して再試行してください。",
       "failedToPreview": "履歴書のプレビューに失敗しました。設定を確認して再試行してください。",
       "failedToConfirm": "履歴書の確定に失敗しました。もう一度お試しください。"
+    },
+    "warnings": {
+      "noRelevantWorkExperience": "関連する職務経歴が見つかりませんでした。最新のものを代替として追加しました。",
+      "noRelevantProject": "関連するプロジェクトが見つかりませんでした。最新のものを代替として追加しました。",
+      "itemRewriteFailed": "一部の項目を書き直せませんでした。元の説明を保持します。",
+      "skillsRewriteFailed": "スキルの並び替えに失敗しました。元のリストを保持します。"
     }
   },
   "settings": {
@@ -838,5 +845,67 @@
     "clearApiKeysDescription": "すべてのAPIキーを削除してもよろしいですか？AI機能を使用するには再入力が必要になります。",
     "resetDatabase": "データベースをリセットして全データを消去しますか？",
     "resetDatabaseDescription": "すべての履歴書、求人内容、生成されたコンテンツが永久に削除されます。この操作は取り消せません。"
+  },
+  "masterProfile": {
+    "label": "マスタープロファイル",
+    "title": "キャリアインベントリ",
+    "tailorLink": "プロファイルからカスタマイズ",
+    "unsavedChanges": "未保存の変更",
+    "importFromCv": "CVからインポート",
+    "importing": "インポート中...",
+    "saveMasterProfile": "マスタープロファイルを保存",
+    "loadError": "マスタープロファイルの読み込みに失敗しました。",
+    "saveSuccess": "マスタープロファイルを保存しました。",
+    "saveError": "マスタープロファイルの保存に失敗しました。",
+    "importSuccess": "CVからマスタープロファイルをインポートしました。",
+    "importError": "CVのインポートに失敗しました。",
+    "importNoResume": "アップロードされたマスター履歴書が見つかりません。インポートを使用するには先にアップロードしてください。",
+    "sections": {
+      "personalInfo": {
+        "description": "アイデンティティ、リンク、各カスタマイズされた職務経歴書のベースとなる再利用可能な概要。"
+      },
+      "workExperience": {
+        "title": "職務経歴",
+        "description": "完全な箇条書きを保持し、各職務に関連する技術を列挙してください。",
+        "item": "職歴 #{id}",
+        "addButton": "職歴を追加",
+        "descriptionBullets": "説明の箇条書き",
+        "descriptionPlaceholder": "1行に1つの箇条書き"
+      },
+      "projects": {
+        "description": "カスタマイズされた職務経歴書に取り込めるサイドプロジェクトやポートフォリオ作品を記録します。",
+        "item": "プロジェクト #{id}",
+        "descriptionBullets": "説明の箇条書き",
+        "descriptionPlaceholder": "1行に1つの箇条書き"
+      },
+      "education": {
+        "description": "関連する際に職務経歴書が再利用できるよう、学歴をグローバルに保持します。",
+        "item": "学歴 #{id}",
+        "addButton": "学歴を追加",
+        "descriptionPlaceholder": "オプションのコンテキスト"
+      },
+      "skills": {
+        "title": "スキル・言語・資格",
+        "description": "これらのフラットリストは選択ステップで直接利用できます。",
+        "tailoringNote": "カスタマイズフローはこのプロファイルから最初に選択し、その後通常の改善パスを実行します。"
+      }
+    },
+    "fields": {
+      "name": "名前",
+      "title": "肩書き",
+      "email": "メールアドレス",
+      "phone": "電話番号",
+      "linkedin": "LinkedIn",
+      "github": "GitHub",
+      "summaryPlaceholder": "カスタマイズフローが再利用する広範な概要を書いてください。",
+      "technologies": "技術"
+    },
+    "emptyState": {
+      "title": "完全なキャリアソースを構築しましょう。",
+      "description": "完全な経歴、プロジェクト、スタック、言語、資格をここに保存します。カスタマイズはアップロードされた1つのCVに頼る代わりに、このプロファイルから選択します。",
+      "startFromScratch": "ゼロから始める",
+      "importTooltipEnabled": "現在のマスター履歴書からインポート",
+      "importTooltipDisabled": "インポートを使用するには先にマスター履歴書をアップロードしてください"
+    }
   }
 }

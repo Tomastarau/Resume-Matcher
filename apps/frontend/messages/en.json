@@ -570,7 +570,9 @@
     },
     "warnings": {
       "noRelevantWorkExperience": "No relevant work experience found. Added most recent as fallback.",
-      "noRelevantProject": "No relevant project found. Added most recent as fallback."
+      "noRelevantProject": "No relevant project found. Added most recent as fallback.",
+      "itemRewriteFailed": "Some items could not be rewritten. Original descriptions kept.",
+      "skillsRewriteFailed": "Skills ordering failed. Original skills list kept."
     }
   },
   "settings": {

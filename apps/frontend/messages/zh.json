@@ -547,7 +547,8 @@
       "projectChanges": "项目变更",
       "certificationChanges": "认证变更",
       "rejectButton": "拒绝并重新生成",
-      "confirmButton": "确认并保存"
+      "confirmButton": "确认并保存",
+      "fallbackWarnings": "查看警告"
     },
     "regenerateDialog": {
       "title": "重新生成定制简历？",
@@ -566,6 +567,12 @@
       "failedToGenerate": "生成简历失败。请检查设置后重试。",
       "failedToPreview": "预览简历失败。请检查设置后重试。",
       "failedToConfirm": "确认简历失败。请重试。"
+    },
+    "warnings": {
+      "noRelevantWorkExperience": "未找到相关工作经历。已添加最近的作为备选。",
+      "noRelevantProject": "未找到相关项目。已添加最近的作为备选。",
+      "itemRewriteFailed": "部分条目无法重写。保留原始描述。",
+      "skillsRewriteFailed": "技能排序失败。保留原始列表。"
     }
   },
   "settings": {
@@ -838,5 +845,67 @@
     "clearApiKeysDescription": "您确定要删除所有 API 密钥吗？您需要重新输入它们才能使用 AI 功能。",
     "resetDatabase": "重置数据库并清除所有数据？",
     "resetDatabaseDescription": "这将永久删除所有简历、职位描述和生成的内容。此操作不可逆。"
+  },
+  "masterProfile": {
+    "label": "主档案",
+    "title": "职业清单",
+    "tailorLink": "从档案定制",
+    "unsavedChanges": "未保存的更改",
+    "importFromCv": "从简历导入",
+    "importing": "导入中...",
+    "saveMasterProfile": "保存主档案",
+    "loadError": "加载主档案失败。",
+    "saveSuccess": "主档案已保存。",
+    "saveError": "保存主档案失败。",
+    "importSuccess": "已从简历导入主档案。",
+    "importError": "导入简历失败。",
+    "importNoResume": "未找到上传的主简历。请先上传一份以使用导入功能。",
+    "sections": {
+      "personalInfo": {
+        "description": "身份信息、链接和可重用摘要，将为每份定制简历提供基础。"
+      },
+      "workExperience": {
+        "title": "工作经历",
+        "description": "保留完整的要点并列出每个职位相关的技术。",
+        "item": "经历 #{id}",
+        "addButton": "添加经历",
+        "descriptionBullets": "描述要点",
+        "descriptionPlaceholder": "每行一个要点"
+      },
+      "projects": {
+        "description": "记录选择器可以纳入定制简历的个人项目和作品集。",
+        "item": "项目 #{id}",
+        "descriptionBullets": "描述要点",
+        "descriptionPlaceholder": "每行一个要点"
+      },
+      "education": {
+        "description": "全局保留教育经历，以便定制简历在相关时重用。",
+        "item": "教育 #{id}",
+        "addButton": "添加教育",
+        "descriptionPlaceholder": "可选背景信息"
+      },
+      "skills": {
+        "title": "技能、语言、证书",
+        "description": "这些列表直接供选择步骤使用。",
+        "tailoringNote": "定制流程现在首先从此档案中选择，然后运行常规改进流程。"
+      }
+    },
+    "fields": {
+      "name": "姓名",
+      "title": "职称",
+      "email": "电子邮件",
+      "phone": "电话",
+      "linkedin": "LinkedIn",
+      "github": "GitHub",
+      "summaryPlaceholder": "撰写定制流程将重用的广泛摘要。",
+      "technologies": "技术"
+    },
+    "emptyState": {
+      "title": "构建您完整的职业来源。",
+      "description": "在此存储您完整的经历、项目、技术栈、语言和证书。定制将从此档案中选择，而不是依赖单个上传的简历。",
+      "startFromScratch": "从头开始",
+      "importTooltipEnabled": "从当前主简历导入",
+      "importTooltipDisabled": "请先上传主简历以使用导入功能"
+    }
   }
 }

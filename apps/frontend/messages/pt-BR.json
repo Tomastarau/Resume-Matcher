@@ -547,7 +547,8 @@
       "projectChanges": "Alterações de projetos",
       "certificationChanges": "Alterações de certificações",
       "rejectButton": "Rejeitar e regenerar",
-      "confirmButton": "Confirmar e salvar"
+      "confirmButton": "Confirmar e salvar",
+      "fallbackWarnings": "Revisar avisos"
     },
     "regenerateDialog": {
       "title": "Regenerar o currículo personalizado?",
@@ -566,6 +567,12 @@
       "failedToGenerate": "Falha ao gerar currículo. Verifique suas configurações e tente novamente.",
       "failedToPreview": "Falha ao pré-visualizar o currículo. Verifique suas configurações e tente novamente.",
       "failedToConfirm": "Falha ao confirmar o currículo. Tente novamente."
+    },
+    "warnings": {
+      "noRelevantWorkExperience": "Nenhuma experiência profissional relevante encontrada. A mais recente foi adicionada como alternativa.",
+      "noRelevantProject": "Nenhum projeto relevante encontrado. O mais recente foi adicionado como alternativa.",
+      "itemRewriteFailed": "Alguns itens não puderam ser reescritos. Descrições originais mantidas.",
+      "skillsRewriteFailed": "O ordenamento de habilidades falhou. Lista original mantida."
     }
   },
   "settings": {
@@ -838,5 +845,67 @@
     "clearApiKeysDescription": "Tem certeza que deseja remover todas as chaves de API? Você precisará inseri-las novamente para usar recursos de IA.",
     "resetDatabase": "Redefinir Banco de Dados e Limpar Todos os Dados?",
     "resetDatabaseDescription": "Isso excluirá permanentemente TODOS os currículos, descrições de vagas e conteúdo gerado. Esta ação é irreversível."
+  },
+  "masterProfile": {
+    "label": "Perfil Principal",
+    "title": "Inventário de carreira",
+    "tailorLink": "Personalizar a partir do perfil",
+    "unsavedChanges": "Alterações não salvas",
+    "importFromCv": "Importar do CV",
+    "importing": "Importando...",
+    "saveMasterProfile": "Salvar Perfil Principal",
+    "loadError": "Falha ao carregar o perfil principal.",
+    "saveSuccess": "Perfil Principal salvo.",
+    "saveError": "Falha ao salvar o perfil principal.",
+    "importSuccess": "Perfil Principal importado do CV.",
+    "importError": "Falha ao importar o CV.",
+    "importNoResume": "Nenhum currículo principal carregado foi encontrado. Carregue um primeiro para usar a importação.",
+    "sections": {
+      "personalInfo": {
+        "description": "Identidade, links e o resumo reutilizável que iniciará cada CV personalizado."
+      },
+      "workExperience": {
+        "title": "Experiência Profissional",
+        "description": "Mantenha os pontos completos e liste as tecnologias de cada função.",
+        "item": "Experiência #{id}",
+        "addButton": "Adicionar Experiência",
+        "descriptionBullets": "Pontos de descrição",
+        "descriptionPlaceholder": "Um ponto por linha"
+      },
+      "projects": {
+        "description": "Registre os projetos pessoais e trabalhos de portfólio que o seletor pode incluir nos CVs.",
+        "item": "Projeto #{id}",
+        "descriptionBullets": "Pontos de descrição",
+        "descriptionPlaceholder": "Um ponto por linha"
+      },
+      "education": {
+        "description": "Mantenha a educação disponível globalmente para que o CV possa reutilizá-la quando relevante.",
+        "item": "Educação #{id}",
+        "addButton": "Adicionar Educação",
+        "descriptionPlaceholder": "Contexto opcional"
+      },
+      "skills": {
+        "title": "Habilidades, Idiomas, Certificações",
+        "description": "Essas listas planas estão diretamente disponíveis para a etapa de seleção.",
+        "tailoringNote": "O fluxo de personalização agora seleciona primeiro deste perfil, depois executa o processo de melhoria habitual."
+      }
+    },
+    "fields": {
+      "name": "Nome",
+      "title": "Título",
+      "email": "E-mail",
+      "phone": "Telefone",
+      "linkedin": "LinkedIn",
+      "github": "GitHub",
+      "summaryPlaceholder": "Escreva o resumo amplo que o fluxo de personalização reutilizará.",
+      "technologies": "Tecnologias"
+    },
+    "emptyState": {
+      "title": "Construa sua fonte de carreira completa.",
+      "description": "Armazene toda a sua experiência, projetos, stack, idiomas e certificações aqui. A personalização escolherá deste perfil em vez de depender de um CV carregado.",
+      "startFromScratch": "Começar do zero",
+      "importTooltipEnabled": "Importar do seu currículo principal atual",
+      "importTooltipDisabled": "Carregue um currículo principal primeiro para usar a importação"
+    }
   }
 }

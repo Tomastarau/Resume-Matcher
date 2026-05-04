@@ -570,7 +570,9 @@
     },
     "warnings": {
       "noRelevantWorkExperience": "Aucune expérience professionnelle pertinente trouvée. La plus récente a été ajoutée par défaut.",
-      "noRelevantProject": "Aucun projet pertinent trouvé. Le plus récent a été ajouté par défaut."
+      "noRelevantProject": "Aucun projet pertinent trouvé. Le plus récent a été ajouté par défaut.",
+      "itemRewriteFailed": "Certains éléments n'ont pas pu être réécrits. Descriptions originales conservées.",
+      "skillsRewriteFailed": "L'ordonnancement des compétences a échoué. Liste originale conservée."
     }
   },
   "settings": {

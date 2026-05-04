@@ -167,57 +167,67 @@ Job Description:
 {job_description}"""
 
 
-MASTER_PROFILE_REWRITE_PROMPT = """Rewrite the bullet points of the selected resume items to better support this job application. Output ONLY the JSON object, no other text.
+MASTER_PROFILE_REWRITE_ITEM_PROMPT = """Rewrite the bullet points of this resume item to better support this job application. Output ONLY the JSON object, no other text.
 
-Rules for summary:
-- Rewrite the summary to lead with the most relevant skills and experience for this role
-- You may reframe the professional title if the selected projects and experiences clearly support it
-- You may remove mentions of technologies or domains that are not relevant to this job
-- Keep the summary to 2-3 sentences maximum
-- Do not change seniority level
-- Do not invent experience, qualifications, or certifications
+Rules:
+- Keep exactly the same number of bullets
+- Make each bullet more specific and relevant to this job
+- Do not invent skills, technologies, or achievements not in the original
+- Do not mention the job offer explicitly
+- Do not use jargon or self-promotional language
+- Never use content from other resume items — only what is listed here
+{fallback_note}
 
-Rules for descriptions:
-- Keep the same number of bullets per item — do not add or remove bullets
-- Make each bullet more informative and specific to what matters for this job
-- Distribute angles across items: each item should highlight a different dimension (technical depth, impact, methodology, results, scale, etc.)
-- For fallback items (marked below), keep the rewrite light and factual — do not over-sell them
-- Never mention the job offer explicitly in descriptions
-- Never invent skills, technologies, responsibilities, or achievements not present in the original
-
-Rules for skills:
-- Read the technologies and description fields of all selected items
-- From the full profile skills list, keep only skills that have a connection to the selected items (appear in technologies or can be inferred from descriptions)
-- Order the resulting skills list by relevance to the job, most relevant first
-- Do not add skills that are not in the full profile skills list
-
-Items to rewrite with full emphasis:
-{full_items}
-
-Items to rewrite lightly (fallback only — not directly relevant to this job):
-{fallback_items}
-
-Full profile skills list (filter from this — do not add skills outside this list):
-{profile_skills}
-
-Current summary:
-{current_summary}
+Item:
+{item_json}
 
 Job Description:
 {job_description}
 
 Output format:
-{{
-  "summary": "Rewritten summary",
-  "workExperience": [
-    {{"id": 1, "description": ["rewritten bullet", "rewritten bullet"]}}
-  ],
-  "projects": [
-    {{"id": 3, "description": ["rewritten bullet"]}},
-    {{"id": 4, "description": ["rewritten bullet"]}}
-  ],
-  "skills": ["MostRelevantSkill", "SecondSkill"]
-}}"""
+{{"description": ["rewritten bullet", "rewritten bullet"]}}"""
+
+MASTER_PROFILE_SKILLS_ORDER_PROMPT = """Order the provided skills by relevance to this job. Output ONLY the JSON object, no other text.
+
+Rules:
+- Return ALL provided skills, just reordered — do not drop any
+- Most relevant to the job first
+- Only return exact strings from the provided skills list — do not rename or invent
+
+Structured job requirements:
+{job_keywords}
+
+Job Description:
+{job_description}
+
+Skills to order:
+{skills_json}
+
+Output format:
+{{"skills": ["Skill1", "Skill2"]}}"""
+
+MASTER_PROFILE_SUMMARY_REWRITE_PROMPT = """Rewrite this professional summary to better support a specific job application. Output ONLY the JSON object, no other text.
+
+Rules:
+- Rewrite to lead with the most relevant skills and experience for this role
+- You may reframe the professional title if the selected items clearly support it
+- You may remove mentions of technologies or domains not relevant to this job
+- Keep to 2-3 sentences maximum
+- Do not change seniority level
+- Do not invent experience, qualifications, or certifications
+
+Current summary:
+{current_summary}
+
+Selected item context:
+{item_context}
+
+Job Description:
+{job_description}
+
+Output format:
+{{"summary": "Rewritten summary"}}"""
+
 
 CRITICAL_TRUTHFULNESS_RULES_TEMPLATE = """CRITICAL TRUTHFULNESS RULES - NEVER VIOLATE:
 1. DO NOT add any skill, tool, technology, or certification that is not explicitly mentioned in the original resume

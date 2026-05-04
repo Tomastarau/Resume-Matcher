@@ -1,6 +1,7 @@
 """Master profile selection service."""
 
 import json
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -14,6 +15,12 @@ MAX_PROJECTS = 3
 
 WARNING_NO_RELEVANT_WORK_EXPERIENCE = "tailor.warnings.noRelevantWorkExperience"
 WARNING_NO_RELEVANT_PROJECT = "tailor.warnings.noRelevantProject"
+
+_ONGOING_MARKERS = {
+    "present", "current", "ongoing",
+    "présent", "actualidad", "presente",
+    "至今", "現在",
+}
 
 
 class MasterProfileSelection(BaseModel):
@@ -53,15 +60,17 @@ async def select_master_profile_subset(
     selection = MasterProfileSelection.model_validate(normalized_result)
 
     capped_selection, warnings = _apply_caps_and_fallback(selection.model_dump(), profile.model_dump())
-    raw_subset = build_resume_subset(profile.model_dump(), capped_selection)
-
     fallback_ids = _collect_fallback_ids(selection.model_dump(), capped_selection)
-    rewritten_subset = await rewrite_selected_items(
+    raw_subset = build_resume_subset(profile.model_dump(), capped_selection, fallback_ids=fallback_ids)
+
+    rewritten_subset, rewrite_warnings = await rewrite_selected_items(
         raw_subset,
         job_description,
         fallback_ids=fallback_ids,
         profile_skills=profile.skills,
+        job_keywords=job_keywords,
     )
+    warnings.extend(rewrite_warnings)
 
     return capped_selection, raw_subset, rewritten_subset, warnings
 
@@ -70,7 +79,7 @@ def _apply_caps_and_fallback(
     selection: dict[str, Any],
     profile: dict[str, Any],
 ) -> tuple[dict[str, Any], list[str]]:
-    """Cap selection to limits and inject index-0 fallback if a section is empty."""
+    """Cap selection to limits and inject most-recent fallback if a section is empty."""
     warnings: list[str] = []
     result = dict(selection)
 
@@ -80,7 +89,8 @@ def _apply_caps_and_fallback(
     else:
         exp_ids = result.get("workExperience", [])[:MAX_WORK_EXPERIENCE]
         if not exp_ids and all_experience:
-            exp_ids = [all_experience[0]["id"]]
+            most_recent = max(all_experience, key=lambda x: _parse_end_year(x.get("years", "")))
+            exp_ids = [most_recent["id"]]
             warnings.append(WARNING_NO_RELEVANT_WORK_EXPERIENCE)
     result["workExperience"] = exp_ids
 
@@ -105,28 +115,105 @@ def _collect_fallback_ids(
     return (capped_exp - original_exp) | (capped_proj - original_proj)
 
 
+def _parse_end_year(years: str) -> int:
+    """Extract the end year from a years string for sorting purposes.
+
+    Returns the current year for ongoing roles, 0 if unparseable.
+    """
+    import datetime
+
+    if not isinstance(years, str):
+        return 0
+
+    parts = re.split(r"\s*[-–—]\s*", years.strip())
+    end_part = parts[-1].strip() if parts else ""
+
+    if end_part.casefold() in _ONGOING_MARKERS:
+        return datetime.date.today().year
+
+    match = re.search(r"\d{4}", end_part)
+    if match:
+        return int(match.group())
+
+    match = re.search(r"\d{4}", years)
+    if match:
+        return int(match.group())
+
+    return 0
+
+
+def _sort_experience_by_end_year(
+    items: list[dict[str, Any]],
+    master_order: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Sort work experience items by end year descending.
+
+    Ties preserve master-profile (insertion) order.
+    """
+    master_index = {item["id"]: i for i, item in enumerate(master_order)}
+    return sorted(
+        items,
+        key=lambda x: (-_parse_end_year(x.get("years", "")), master_index.get(x["id"], 0)),
+    )
+
+
+def _order_projects(
+    profile_projects: list[dict[str, Any]],
+    selected_ids: list[int],
+    fallback_ids: set[int],
+) -> list[dict[str, Any]]:
+    """Return projects in selector relevance order, fallbacks appended at end."""
+    project_by_id = {item["id"]: item for item in profile_projects}
+
+    non_fallback = [
+        project_by_id[pid]
+        for pid in selected_ids
+        if pid in project_by_id and pid not in fallback_ids
+    ]
+    fallback = [
+        project_by_id[pid]
+        for pid in selected_ids
+        if pid in project_by_id and pid in fallback_ids
+    ]
+    return non_fallback + fallback
+
+
 def build_resume_subset(
     profile_data: dict[str, Any],
     selection_data: dict[str, Any] | None = None,
+    fallback_ids: set[int] | None = None,
 ) -> dict[str, Any]:
     """Build a ResumeData subset from the master profile."""
     profile = MasterProfile.model_validate(profile_data).model_dump()
     selection = MasterProfileSelection.model_validate(selection_data or {}).model_dump()
+    fallback_ids = fallback_ids or set()
 
     selected_experience_ids = set(selection["workExperience"])
-    selected_project_ids = set(selection["projects"])
+    selected_project_ids_ordered: list[int] = selection["projects"]
     selected_skills = _normalize_string_selection(selection["skills"])
     selected_languages = _normalize_string_selection(selection["languages"])
     selected_certifications = _normalize_string_selection(selection["certifications"])
 
     if not selection_data:
         selected_experience_ids = {item["id"] for item in profile["workExperience"]}
-        selected_project_ids = {item["id"] for item in profile["projects"]}
+        selected_project_ids_ordered = [item["id"] for item in profile["projects"]]
         selected_skills = {item.casefold(): item for item in profile["skills"]}
         selected_languages = {item.casefold(): item for item in profile["languages"]}
         selected_certifications = {
             item.casefold(): item for item in profile["certifications"]
         }
+
+    selected_experiences_raw = [
+        item for item in profile["workExperience"]
+        if item["id"] in selected_experience_ids
+    ]
+    sorted_experiences = _sort_experience_by_end_year(
+        selected_experiences_raw, profile["workExperience"]
+    )
+
+    ordered_projects = _order_projects(
+        profile["projects"], selected_project_ids_ordered, fallback_ids
+    )
 
     resume_data = {
         "personalInfo": {
@@ -140,17 +227,9 @@ def build_resume_subset(
             "github": profile["personalInfo"].get("github"),
         },
         "summary": profile["personalInfo"].get("summary", ""),
-        "workExperience": [
-            _experience_to_resume_item(item)
-            for item in profile["workExperience"]
-            if item["id"] in selected_experience_ids
-        ],
+        "workExperience": [_experience_to_resume_item(item) for item in sorted_experiences],
         "education": profile["education"],
-        "personalProjects": [
-            _project_to_resume_item(item)
-            for item in profile["projects"]
-            if item["id"] in selected_project_ids
-        ],
+        "personalProjects": [_project_to_resume_item(item) for item in ordered_projects],
         "additional": {
             "technicalSkills": [
                 item

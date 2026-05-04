@@ -140,8 +140,9 @@ class Experience(BaseModel):
     location: str | None = None
     years: str = ""
     description: list[str] = Field(default_factory=list)
+    technologies: list[str] = Field(default_factory=list)
 
-    @field_validator("description", mode="before")
+    @field_validator("description", "technologies", mode="before")
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
@@ -172,8 +173,9 @@ class Project(BaseModel):
     github: str | None = None
     website: str | None = None
     description: list[str] = Field(default_factory=list)
+    technologies: list[str] = Field(default_factory=list)
 
-    @field_validator("description", mode="before")
+    @field_validator("description", "technologies", mode="before")
     @classmethod
     def _normalize_description(cls, value: Any) -> list[str]:
         return _coerce_string_list(value)
